@@ -48,7 +48,7 @@ jobs:
       - name: Placeholder test
         run: echo "Configure seus testes aqui"
 
-  deploy-staging:
+  deploy-dev:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -61,12 +61,12 @@ jobs:
       #     node-version: '20'
       # - run: npm ci && npm run build
 
-      - name: Deploy to staging
+      - name: Deploy to dev
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
           REMOTE_HOST: ${{ secrets.DREAMHOST_HOST }}
           REMOTE_USER: ${{ secrets.DREAMHOST_USER }}
-          REMOTE_PATH: ${{ secrets.DREAMHOST_STAGING_PATH }}
+          REMOTE_PATH: ${{ secrets.DREAMHOST_DEV_PATH }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key

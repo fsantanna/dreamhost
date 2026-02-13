@@ -5,7 +5,7 @@ Deploy automático via GitHub Actions para DreamHost com dois ambientes.
 ## Como funciona
 
 ```
-push master → testes → passam? → deploy em staging.meusite.com
+push master → testes → passam? → deploy em dev.meusite.com
                            ↓ falham
                       ❌ nada acontece
 
@@ -17,15 +17,15 @@ git tag v1.0.0 → testes → passam? → deploy em meusite.com (produção)
 | Evento | Testes | Deploy |
 |--------|--------|--------|
 | PR para master | Roda | Nenhum |
-| Push no master | Roda | Staging |
+| Push no master | Roda | Dev |
 | Tag `v*` | Roda | Produção |
 
 ## Setup
 
-### 1. Criar subdomínio de staging no DreamHost
+### 1. Criar subdomínio dev no DreamHost
 
-No painel do DreamHost, adicione o domínio `staging.meusite.com` apontando para
-um diretório separado (ex: `~/staging.meusite.com/`).
+No painel do DreamHost, adicione o domínio `dev.meusite.com` apontando para
+um diretório separado (ex: `~/dev.meusite.com/`).
 
 ### 2. Gerar chave SSH
 
@@ -48,7 +48,7 @@ Em **Settings > Secrets and variables > Actions**, adicione:
 | `DREAMHOST_SSH_KEY` | Chave privada (conteúdo de `dreamhost_deploy`) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `DREAMHOST_HOST` | Hostname do servidor | `servidor.dreamhost.com` |
 | `DREAMHOST_USER` | Usuário SSH | `meuusuario` |
-| `DREAMHOST_STAGING_PATH` | Diretório de staging | `~/staging.meusite.com/` |
+| `DREAMHOST_DEV_PATH` | Diretório dev | `~/dev.meusite.com/` |
 | `DREAMHOST_PRODUCTION_PATH` | Diretório de produção | `~/meusite.com/` |
 
 ### 5. Adaptar os testes
@@ -58,11 +58,11 @@ Edite `.github/workflows/deploy.yml` e descomente/configure a seção de testes.
 ## Uso no dia a dia
 
 ```bash
-# Desenvolver e testar em staging
+# Desenvolver e testar em dev
 git add . && git commit -m "nova feature"
-git push                          # → staging
+git push                          # → dev
 
-# Verificar em staging.meusite.com ...
+# Verificar em dev.meusite.com ...
 
 # Promover para produção
 git tag v1.0.0

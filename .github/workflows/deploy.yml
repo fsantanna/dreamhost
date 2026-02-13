@@ -102,7 +102,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
           REMOTE_HOST: ${{ vars.DH_HOST }}
           REMOTE_USER: ${{ vars.DH_USER }}
-          REMOTE_DIR: ${{ vars.DH_PROD_DIR }}
+          REMOTE_DIR: ${{ vars.DH_PRO_DIR }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key

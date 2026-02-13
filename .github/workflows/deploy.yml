@@ -66,10 +66,10 @@ jobs:
 
       - name: Deploy to dev
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.DREAMHOST_HOST }}
-          REMOTE_USER: ${{ secrets.DREAMHOST_USER }}
-          REMOTE_DIR: ${{ secrets.DREAMHOST_DEV_DIR }}
+          SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
+          REMOTE_HOST: ${{ vars.DH_HOST }}
+          REMOTE_USER: ${{ vars.DH_USER }}
+          REMOTE_DIR: ${{ vars.DH_DEV_DIR }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
@@ -99,10 +99,10 @@ jobs:
 
       - name: Deploy to production
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.DREAMHOST_HOST }}
-          REMOTE_USER: ${{ secrets.DREAMHOST_USER }}
-          REMOTE_DIR: ${{ secrets.DREAMHOST_PRODUCTION_DIR }}
+          SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
+          REMOTE_HOST: ${{ vars.DH_HOST }}
+          REMOTE_USER: ${{ vars.DH_USER }}
+          REMOTE_DIR: ${{ vars.DH_PROD_DIR }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key

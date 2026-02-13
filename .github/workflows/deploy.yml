@@ -64,25 +64,6 @@ jobs:
       #     node-version: '20'
       # - run: npm ci && npm run build
 
-      - name: Debug variables
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
-          REMOTE_HOST: ${{ vars.DH_HOST }}
-          REMOTE_USER: ${{ vars.DH_USER }}
-          REMOTE_DIR: ${{ vars.DH_DIR_DEV }}
-        run: |
-          echo "=== Checking variables ==="
-          echo "DH_HOST is: [${REMOTE_HOST:-EMPTY}]"
-          echo "DH_USER is: [${REMOTE_USER:-EMPTY}]"
-          echo "DH_DIR_DEV is: [${REMOTE_DIR:-EMPTY}]"
-          if [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "DH_SSH_KEY is: EMPTY"
-          else
-            echo "DH_SSH_KEY is: SET ($(echo "$SSH_PRIVATE_KEY" | wc -l) lines, $(echo "$SSH_PRIVATE_KEY" | wc -c) chars)"
-            echo "First line: $(echo "$SSH_PRIVATE_KEY" | head -1)"
-            echo "Last line: $(echo "$SSH_PRIVATE_KEY" | tail -1)"
-          fi
-
       - name: Deploy to dev
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
@@ -94,8 +75,6 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$REMOTE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          ssh -vvv -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "${REMOTE_USER}@${REMOTE_HOST}" "echo SSH_OK" 2>&1 | tail -30
 
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \

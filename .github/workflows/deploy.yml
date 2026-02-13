@@ -1,4 +1,4 @@
-name: Test & Deploy to DreamHost
+name: Web
 
 on:
   push:

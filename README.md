@@ -1,6 +1,6 @@
 # dreamhost
 
-[![Test & Deploy to DreamHost](https://github.com/fsantanna/dreamhost/actions/workflows/deploy.yml/badge.svg)](https://github.com/fsantanna/dreamhost/actions/workflows/deploy.yml)
+[![Web](https://github.com/fsantanna/dreamhost/actions/workflows/deploy.yml/badge.svg)](https://github.com/fsantanna/dreamhost/actions/workflows/deploy.yml)
 
 Deploy automático via GitHub Actions para DreamHost com dois ambientes.
 

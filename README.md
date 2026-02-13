@@ -1,51 +1,76 @@
 # dreamhost
 
-Deploy automático via GitHub Actions para DreamHost.
+Deploy automático via GitHub Actions para DreamHost com dois ambientes.
 
 ## Como funciona
 
-1. Push no branch `master` dispara o workflow
-2. GitHub Actions roda os testes
-3. Se os testes passam, faz deploy via rsync/SSH para o DreamHost
-4. Pull requests rodam os testes mas **não** fazem deploy
+```
+push master → testes → passam? → deploy em staging.meusite.com
+                           ↓ falham
+                      ❌ nada acontece
+
+git tag v1.0.0 → testes → passam? → deploy em meusite.com (produção)
+                              ↓ falham
+                         ❌ nada acontece
+```
+
+| Evento | Testes | Deploy |
+|--------|--------|--------|
+| PR para master | Roda | Nenhum |
+| Push no master | Roda | Staging |
+| Tag `v*` | Roda | Produção |
 
 ## Setup
 
-### 1. Gerar chave SSH
+### 1. Criar subdomínio de staging no DreamHost
+
+No painel do DreamHost, adicione o domínio `staging.meusite.com` apontando para
+um diretório separado (ex: `~/staging.meusite.com/`).
+
+### 2. Gerar chave SSH
 
 ```bash
 ssh-keygen -t ed25519 -f dreamhost_deploy -C "github-actions-deploy" -N ""
 ```
 
-### 2. Adicionar chave pública no DreamHost
-
-Copie o conteúdo de `dreamhost_deploy.pub` para o DreamHost:
+### 3. Adicionar chave pública no DreamHost
 
 ```bash
 ssh-copy-id -i dreamhost_deploy.pub usuario@servidor.dreamhost.com
 ```
 
-Ou adicione manualmente em `~/.ssh/authorized_keys` no servidor.
+### 4. Configurar GitHub Secrets
 
-### 3. Configurar GitHub Secrets
-
-No repositório GitHub, vá em **Settings > Secrets and variables > Actions** e adicione:
+Em **Settings > Secrets and variables > Actions**, adicione:
 
 | Secret | Valor | Exemplo |
 |--------|-------|---------|
-| `DREAMHOST_SSH_KEY` | Conteúdo da chave privada (`dreamhost_deploy`) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `DREAMHOST_HOST` | Hostname do servidor DreamHost | `servidor.dreamhost.com` |
-| `DREAMHOST_USER` | Usuário SSH no DreamHost | `meuusuario` |
-| `DREAMHOST_PATH` | Caminho do site no servidor | `~/meusite.com/` |
+| `DREAMHOST_SSH_KEY` | Chave privada (conteúdo de `dreamhost_deploy`) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `DREAMHOST_HOST` | Hostname do servidor | `servidor.dreamhost.com` |
+| `DREAMHOST_USER` | Usuário SSH | `meuusuario` |
+| `DREAMHOST_STAGING_PATH` | Diretório de staging | `~/staging.meusite.com/` |
+| `DREAMHOST_PRODUCTION_PATH` | Diretório de produção | `~/meusite.com/` |
 
-### 4. Adaptar os testes
+### 5. Adaptar os testes
 
-Edite `.github/workflows/deploy.yml` e descomente/configure a seção de testes conforme sua stack (Node.js, PHP, Python, etc.).
+Edite `.github/workflows/deploy.yml` e descomente/configure a seção de testes.
 
-## Estrutura do workflow
+## Uso no dia a dia
 
+```bash
+# Desenvolver e testar em staging
+git add . && git commit -m "nova feature"
+git push                          # → staging
+
+# Verificar em staging.meusite.com ...
+
+# Promover para produção
+git tag v1.0.0
+git push origin v1.0.0            # → produção
 ```
-push master → [test] → testes passam? → [deploy] → rsync para DreamHost
-                              ↓ falham
-                         ❌ deploy não acontece
-```
+
+### Convenção de tags (semver)
+
+- **Patch** (bugfix): `v1.0.0` → `v1.0.1`
+- **Minor** (feature): `v1.0.0` → `v1.1.0`
+- **Major** (breaking): `v1.0.0` → `v2.0.0`

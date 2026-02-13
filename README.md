@@ -3,33 +3,40 @@
 [![Test & Deploy to DreamHost](https://github.com/fsantanna/dreamhost/actions/workflows/deploy.yml/badge.svg)](https://github.com/fsantanna/dreamhost/actions/workflows/deploy.yml)
 
 Deploy automático via GitHub Actions para DreamHost com dois ambientes.
+Reutilizável por múltiplos repos — cada um define seu `APP_DIR`.
 
 ## Como funciona
 
-```
-push master → testes → passam? → deploy em dev.meusite.com/dh/
-                           ↓ falham
-                      ❌ nada acontece
-
-git tag v1.0.0 → testes → passam? → deploy em meusite.com/dh/
-                              ↓ falham
-                         ❌ nada acontece
-```
-
 | Evento | Testes | Deploy |
 |--------|--------|--------|
-| PR para master | Roda | Nenhum |
-| Push no master | Roda | `dev.meusite.com/dh/` |
-| Tag `v*` | Roda | `meusite.com/dh/` |
+| PR para main | Roda | Nenhum |
+| Push no main | Roda | `dev.meusite.com/APP_DIR/` |
+| Tag `v*` | Roda | `meusite.com/APP_DIR/` |
 
-O `APP_DIR` é definido no topo do workflow (`dh` neste caso). Cada repo pode
-ter seu próprio `APP_DIR`, enquanto os secrets do DreamHost são compartilhados.
+## Arquitetura multi-app
 
-## Setup
+Os secrets/variables do DreamHost são compartilhados.
+Cada repo define apenas o `APP_DIR` no workflow:
+
+```
+dev.ceu-lang.org/
+├── dh/          ← repo dreamhost  (APP_DIR: dh)
+├── blog/        ← repo blog       (APP_DIR: blog)
+└── api/         ← repo api        (APP_DIR: api)
+```
+
+## Como usar em um novo repo
+
+1. Copiar `.github/workflows/deploy.yml` para o novo repo
+2. Mudar `APP_DIR` no topo do workflow
+3. Colocar os arquivos do site em `web/`
+4. Configurar os mesmos secrets/variables (ou usar Organization-level)
+
+## Setup inicial (uma vez)
 
 ### 1. Criar subdomínio dev no DreamHost
 
-No painel do DreamHost, adicione o domínio `dev.meusite.com` apontando para
+No painel do DreamHost, adicione `dev.meusite.com` apontando para
 um diretório separado (ex: `~/dev.meusite.com/`).
 
 ### 2. Gerar chave SSH
@@ -44,37 +51,28 @@ ssh-keygen -t ed25519 -f dreamhost_deploy -C "github-actions-deploy" -N ""
 ssh-copy-id -i dreamhost_deploy.pub usuario@servidor.dreamhost.com
 ```
 
-### 4. Configurar GitHub Secrets
+### 4. Configurar GitHub Secrets e Variables
 
-Em **Settings > Secrets and variables > Actions**, adicione:
+Em **Settings > Secrets and variables > Actions**:
 
-| Secret | Valor | Exemplo |
-|--------|-------|---------|
-| `DREAMHOST_SSH_KEY` | Chave privada (conteúdo de `dreamhost_deploy`) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `DREAMHOST_HOST` | Hostname do servidor | `servidor.dreamhost.com` |
-| `DREAMHOST_USER` | Usuário SSH | `meuusuario` |
-| `DREAMHOST_DEV_DIR` | Diretório raiz do domínio dev | `~/dev.meusite.com` |
-| `DREAMHOST_PRODUCTION_DIR` | Diretório raiz do domínio de produção | `~/meusite.com` |
-
-Os secrets apontam para a **raiz do domínio**. Cada repo define seu `APP_DIR`
-no workflow, e o deploy vai para `{DIR}/{APP_DIR}/`.
-
-### 5. Adaptar os testes
-
-Edite `.github/workflows/deploy.yml` e descomente/configure a seção de testes.
+| Tipo     | Nome         | Valor                              |
+|----------|--------------|------------------------------------|
+| Secret   | `DH_SSH_KEY` | Chave privada (`dreamhost_deploy`) |
+| Variable | `DH_HOST`    | Hostname do servidor               |
+| Variable | `DH_USER`    | Usuário SSH                        |
+| Variable | `DH_DIR_DEV` | Diretório raiz do domínio dev      |
+| Variable | `DH_DIR_PRO` | Diretório raiz do domínio produção |
 
 ## Uso no dia a dia
 
 ```bash
 # Desenvolver e testar em dev
 git add . && git commit -m "nova feature"
-git push                          # → dev.meusite.com/dh/
-
-# Verificar em dev.meusite.com/dh/ ...
+git push                          # → dev.meusite.com/APP_DIR/
 
 # Promover para produção
 git tag v1.0.0
-git push origin v1.0.0            # → meusite.com/dh/
+git push origin v1.0.0            # → meusite.com/APP_DIR/
 ```
 
 ### Convenção de tags (semver)

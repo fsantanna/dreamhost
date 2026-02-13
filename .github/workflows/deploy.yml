@@ -84,7 +84,7 @@ jobs:
 
           rm -f ~/.ssh/deploy_key
 
-  deploy-production:
+  deploy-pro:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -97,7 +97,7 @@ jobs:
       #     node-version: '20'
       # - run: npm ci && npm run build
 
-      - name: Deploy to production
+      - name: Deploy to pro
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DH_SSH_KEY }}
           REMOTE_HOST: ${{ vars.DH_HOST }}

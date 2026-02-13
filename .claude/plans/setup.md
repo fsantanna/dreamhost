@@ -2,121 +2,146 @@
 
 ## Objetivo
 
-Configurar deploy automático do site para DreamHost via SSH usando GitHub Actions.
-- Push em `main` → deploy para **produção**
-- Push em `dev` → deploy para **desenvolvimento**
+Configurar deploy automático para DreamHost via SSH usando GitHub Actions.
+Cada repositório (web app) copia o workflow e muda apenas o `APP_DIR`.
+
+- Push em `main` → deploy para **desenvolvimento** (`dev.site.com/APP_DIR/`)
+- Tag `v*` → deploy para **produção** (`site.com/APP_DIR/`)
 
 ---
 
-## 1. Gerar par de chaves SSH (na máquina local)
+## Arquitetura multi-app
 
-```bash
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/dreamhost_deploy
+```
+Secrets/Variables (compartilhados)     Cada repo define
+─────────────────────────────────     ─────────────────
+DH_SSH_KEY  (secret)                  APP_DIR: dh
+DH_HOST     (variable)               APP_DIR: blog
+DH_USER     (variable)               APP_DIR: api
+DH_DIR_DEV  (variable)               ...
+DH_DIR_PRO  (variable)
 ```
 
-Isso gera dois arquivos:
-- `~/.ssh/dreamhost_deploy` — chave **privada** (vai pro GitHub Secret)
-- `~/.ssh/dreamhost_deploy.pub` — chave **pública** (vai pro DreamHost)
+O deploy vai para `{DH_DIR_DEV ou DH_DIR_PRO}/{APP_DIR}/`.
+Cada app ocupa sua subpasta, sem interferir nas outras.
 
----
+```
+dev.ceu-lang.org/
+├── dh/          ← repo dreamhost  (APP_DIR: dh)
+├── blog/        ← repo blog       (APP_DIR: blog)
+└── api/         ← repo api        (APP_DIR: api)
 
-## 2. Adicionar chave pública no DreamHost
-
-Copiar o conteúdo da chave pública para o servidor:
-
-```bash
-ssh-copy-id -i ~/.ssh/dreamhost_deploy.pub usuario@servidor.dreamhost.com
+ceu-lang.org/
+├── dh/
+├── blog/
+└── api/
 ```
 
-Ou manualmente adicionar o conteúdo de `dreamhost_deploy.pub` no arquivo
-`~/.ssh/authorized_keys` do servidor DreamHost.
+---
+
+## Setup único (uma vez por conta DreamHost)
+
+### 1. Criar subdomínio dev no DreamHost
+
+No painel do DreamHost, adicione `dev.meusite.com` apontando para
+um diretório separado (ex: `~/dev.meusite.com/`).
+
+### 2. Gerar chave SSH
+
+```bash
+ssh-keygen -t ed25519 -f dreamhost_deploy -C "github-actions-deploy" -N ""
+```
+
+### 3. Adicionar chave pública no DreamHost
+
+```bash
+ssh-copy-id -i dreamhost_deploy.pub usuario@servidor.dreamhost.com
+```
+
+### 4. Configurar GitHub Secrets e Variables
+
+Em **Settings > Secrets and variables > Actions**:
+
+| Tipo     | Nome         | Valor                              | Exemplo                    |
+|----------|--------------|------------------------------------|----------------------------|
+| Secret   | `DH_SSH_KEY` | Chave privada (`dreamhost_deploy`) | `-----BEGIN OPENSSH...`    |
+| Variable | `DH_HOST`    | Hostname do servidor               | `servidor.dreamhost.com`   |
+| Variable | `DH_USER`    | Usuário SSH                        | `meuusuario`               |
+| Variable | `DH_DIR_DEV` | Diretório raiz do domínio dev      | `~/dev.meusite.com`        |
+| Variable | `DH_DIR_PRO` | Diretório raiz do domínio produção | `~/meusite.com`            |
+
+> Para compartilhar entre repos, use **Organization secrets/variables**
+> ou configure os mesmos valores em cada repo.
 
 ---
 
-## 3. Configurar GitHub — Secrets e Variables
+## Setup por app (cada novo repo)
 
-### Secrets (Settings → Secrets and variables → Actions → Secrets)
+### 1. Copiar o workflow
 
-| Secret                | Valor                                      |
-|-----------------------|--------------------------------------------|
-| `DREAMHOST_SSH_KEY`   | Conteúdo da chave privada (`dreamhost_deploy`) |
+Copiar `.github/workflows/deploy.yml` para o novo repo.
 
-### Variables (Settings → Secrets and variables → Actions → Variables)
+### 2. Mudar o `APP_DIR`
 
-| Variable                   | Valor                                        |
-|----------------------------|----------------------------------------------|
-| `DREAMHOST_HOST`           | `servidor.dreamhost.com`                     |
-| `DREAMHOST_USER`           | `usuario_ssh`                                |
-| `DREAMHOST_DEV_DIR`        | `/home/usuario/dev.seusite.com`              |
-| `DREAMHOST_PRODUCTION_DIR` | `/home/usuario/seusite.com`                  |
-
-> **Nota:** Só a chave SSH precisa ser Secret (é sensível). Os outros valores
-> são configuração e podem ficar em Variables (visíveis, mais fáceis de editar).
-
----
-
-## 4. Criar o workflow do GitHub Actions
-
-Arquivo: `.github/workflows/deploy.yml`
+No topo do workflow, alterar:
 
 ```yaml
-name: Deploy to DreamHost
-
-on:
-  push:
-    branches: [main, dev]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DREAMHOST_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ vars.DREAMHOST_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Set deploy directory
-        id: target
-        run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "dir=${{ vars.DREAMHOST_PRODUCTION_DIR }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "dir=${{ vars.DREAMHOST_DEV_DIR }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Deploy via rsync
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '.claude' \
-            ./ ${{ vars.DREAMHOST_USER }}@${{ vars.DREAMHOST_HOST }}:${{ steps.target.outputs.dir }}/
+env:
+  APP_DIR: minha-app  # nome da subpasta no DreamHost
 ```
+
+### 3. Colocar arquivos em `web/`
+
+O rsync envia o conteúdo de `web/` para o servidor.
+Colocar todos os arquivos do site dentro de `web/`.
+
+### 4. Adaptar os testes
+
+Editar a seção de testes no workflow conforme o projeto.
 
 ---
 
-## 5. Checklist de execução
+## Checklist
 
+### Uma vez (conta DreamHost)
+- [ ] Criar subdomínio dev no painel DreamHost
 - [ ] Gerar par de chaves SSH (ed25519)
 - [ ] Adicionar chave pública no `authorized_keys` do DreamHost
-- [ ] Testar conexão SSH manualmente: `ssh -i ~/.ssh/dreamhost_deploy usuario@servidor.dreamhost.com`
-- [ ] Criar Secret `DREAMHOST_SSH_KEY` no GitHub (conteúdo da chave privada)
-- [ ] Criar Variables no GitHub: `DREAMHOST_HOST`, `DREAMHOST_USER`, `DREAMHOST_DEV_DIR`, `DREAMHOST_PRODUCTION_DIR`
-- [ ] Criar arquivo `.github/workflows/deploy.yml` no repositório
-- [ ] Fazer push e verificar se o Action executa com sucesso
-- [ ] Verificar se os arquivos chegaram no servidor DreamHost
+- [ ] Testar SSH: `ssh -i dreamhost_deploy usuario@servidor`
+- [ ] Criar Secret `DH_SSH_KEY` no GitHub
+- [ ] Criar Variables: `DH_HOST`, `DH_USER`, `DH_DIR_DEV`, `DH_DIR_PRO`
+
+### Cada novo repo
+- [ ] Copiar `.github/workflows/deploy.yml`
+- [ ] Definir `APP_DIR` no workflow
+- [ ] Colocar arquivos em `web/`
+- [ ] Push em `main` e verificar deploy em dev
+- [ ] Tag `v*` e verificar deploy em produção
+
+---
+
+## Uso no dia a dia
+
+```bash
+# Desenvolver e testar em dev
+git add . && git commit -m "nova feature"
+git push                          # → dev.meusite.com/APP_DIR/
+
+# Promover para produção
+git tag v1.0.0
+git push origin v1.0.0            # → meusite.com/APP_DIR/
+```
+
+### Convenção de tags (semver)
+
+- **Patch** (bugfix): `v1.0.0` → `v1.0.1`
+- **Minor** (feature): `v1.0.0` → `v1.1.0`
+- **Major** (breaking): `v1.0.0` → `v2.0.0`
 
 ---
 
 ## Notas
 
 - O `rsync --delete` remove do servidor arquivos que não existem mais no repo.
-  Se não quiser esse comportamento, remover a flag `--delete`.
-- Os diretórios `.git`, `.github` e `.claude` são excluídos do deploy.
-- Para adicionar mais exclusões, adicionar linhas `--exclude 'pasta'` no rsync.
+- Exclusões padrão: `node_modules`, `.env`.
+- Cada app é independente: o `--delete` só afeta a subpasta `APP_DIR/` daquela app.

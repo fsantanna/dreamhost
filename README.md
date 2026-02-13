@@ -5,11 +5,11 @@ Deploy automático via GitHub Actions para DreamHost com dois ambientes.
 ## Como funciona
 
 ```
-push master → testes → passam? → deploy em dev.meusite.com
+push master → testes → passam? → deploy em dev.meusite.com/dh/
                            ↓ falham
                       ❌ nada acontece
 
-git tag v1.0.0 → testes → passam? → deploy em meusite.com (produção)
+git tag v1.0.0 → testes → passam? → deploy em meusite.com/dh/
                               ↓ falham
                          ❌ nada acontece
 ```
@@ -17,8 +17,11 @@ git tag v1.0.0 → testes → passam? → deploy em meusite.com (produção)
 | Evento | Testes | Deploy |
 |--------|--------|--------|
 | PR para master | Roda | Nenhum |
-| Push no master | Roda | Dev |
-| Tag `v*` | Roda | Produção |
+| Push no master | Roda | `dev.meusite.com/dh/` |
+| Tag `v*` | Roda | `meusite.com/dh/` |
+
+O `APP_DIR` é definido no topo do workflow (`dh` neste caso). Cada repo pode
+ter seu próprio `APP_DIR`, enquanto os secrets do DreamHost são compartilhados.
 
 ## Setup
 
@@ -48,8 +51,11 @@ Em **Settings > Secrets and variables > Actions**, adicione:
 | `DREAMHOST_SSH_KEY` | Chave privada (conteúdo de `dreamhost_deploy`) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `DREAMHOST_HOST` | Hostname do servidor | `servidor.dreamhost.com` |
 | `DREAMHOST_USER` | Usuário SSH | `meuusuario` |
-| `DREAMHOST_DEV_PATH` | Diretório dev | `~/dev.meusite.com/` |
-| `DREAMHOST_PRODUCTION_PATH` | Diretório de produção | `~/meusite.com/` |
+| `DREAMHOST_DEV_DIR` | Diretório raiz do domínio dev | `~/dev.meusite.com` |
+| `DREAMHOST_PRODUCTION_DIR` | Diretório raiz do domínio de produção | `~/meusite.com` |
+
+Os secrets apontam para a **raiz do domínio**. Cada repo define seu `APP_DIR`
+no workflow, e o deploy vai para `{DIR}/{APP_DIR}/`.
 
 ### 5. Adaptar os testes
 
@@ -60,13 +66,13 @@ Edite `.github/workflows/deploy.yml` e descomente/configure a seção de testes.
 ```bash
 # Desenvolver e testar em dev
 git add . && git commit -m "nova feature"
-git push                          # → dev
+git push                          # → dev.meusite.com/dh/
 
-# Verificar em dev.meusite.com ...
+# Verificar em dev.meusite.com/dh/ ...
 
 # Promover para produção
 git tag v1.0.0
-git push origin v1.0.0            # → produção
+git push origin v1.0.0            # → meusite.com/dh/
 ```
 
 ### Convenção de tags (semver)

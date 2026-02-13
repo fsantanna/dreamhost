@@ -7,6 +7,9 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  APP_DIR: dh  # subpasta deste projeto no DreamHost
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -66,7 +69,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
           REMOTE_HOST: ${{ secrets.DREAMHOST_HOST }}
           REMOTE_USER: ${{ secrets.DREAMHOST_USER }}
-          REMOTE_PATH: ${{ secrets.DREAMHOST_DEV_PATH }}
+          REMOTE_DIR: ${{ secrets.DREAMHOST_DEV_DIR }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
@@ -79,7 +82,7 @@ jobs:
             --exclude '.github' \
             --exclude 'node_modules' \
             --exclude '.env' \
-            ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}"
+            ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/${APP_DIR}/"
 
           rm -f ~/.ssh/deploy_key
 
@@ -101,7 +104,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
           REMOTE_HOST: ${{ secrets.DREAMHOST_HOST }}
           REMOTE_USER: ${{ secrets.DREAMHOST_USER }}
-          REMOTE_PATH: ${{ secrets.DREAMHOST_PRODUCTION_PATH }}
+          REMOTE_DIR: ${{ secrets.DREAMHOST_PRODUCTION_DIR }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
@@ -114,6 +117,6 @@ jobs:
             --exclude '.github' \
             --exclude 'node_modules' \
             --exclude '.env' \
-            ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}"
+            ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/${APP_DIR}/"
 
           rm -f ~/.ssh/deploy_key
